@@ -53,7 +53,7 @@ const App: React.FC = () => {
   const [score, setScore] = useState(0);
 
   // 指向项目内的音频文件（使用 Vite 推荐的方式构造可访问 URL）
-  const AUDIO_URL = new URL('./music', import.meta.url).href;
+  const AUDIO_URL = new URL('./music/开始懂了.mp3', import.meta.url).href;
 
   const togglePlay = () => {
     if (audioRef.current) {
