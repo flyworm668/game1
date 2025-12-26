@@ -1,0 +1,5 @@
+{
+  "name": "Particle Christmas Tree",
+  "description": "An interactive, generative Christmas tree with falling snow, mouse interactions, and a built-in music player.",
+  "requestFramePermissions": []
+}
