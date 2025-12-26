@@ -15,7 +15,7 @@ export interface Particle {
   density: number; // Mass/Response to mouse
   friction: number;
   ease: number;
-  type: 'leaf' | 'trunk' | 'star' | 'ornament' | 'trail' | 'explosion' | 'ground_light' | 'sky_star' | 'firework_rocket' | 'firework_spark';
+  type: 'leaf' | 'trunk' | 'star' | 'ornament' | 'trail' | 'explosion' | 'ground_light' | 'sky_star' | 'firework_rocket' | 'firework_spark' | 'user_ornament' | 'shockwave';
   life?: number; // For trail/explosion particles: 0 to 1 opacity
   decay?: number; // For trail/explosion particles: rate of decay
   // New properties
@@ -63,5 +63,4 @@ export interface TreeConfig {
   height: number;
   leafColor: string;
   trunkColor: string;
-  starColor: string;
 }

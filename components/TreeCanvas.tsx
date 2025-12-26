@@ -11,7 +11,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const mouse = useRef<{ x: number | null; y: number | null }>({ x: null, y: null });
-  const prevMouse = useRef<{ x: number | null; y: number | null }>({ x: null, y: null });
+  const prevMouse = useRef<{ x: number | null; y: number | null }>({ x: null, y: null }); // Track previous mouse position
   
   const particles = useRef<Particle[]>([]); // Tree particles
   const trailParticles = useRef<Particle[]>([]); // Mouse trail
@@ -23,6 +23,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
   const skyStars = useRef<Particle[]>([]);
   const fireworks = useRef<Particle[]>([]);
   const textParticles = useRef<TextParticle[]>([]);
+  const shockwaves = useRef<Particle[]>([]); 
   
   const animationFrameId = useRef<number>(0);
   const giftSpawnTimer = useRef<number>(0);
@@ -46,7 +47,11 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
   };
   
   const TRAIL_COLORS = ['#ef4444', '#22c55e', '#ffffff'];
-  const FIREWORK_TEXTS = ["如意", "开心", "平安", "暴富", "健康", "喜乐"];
+  
+  const FIREWORK_TEXTS = [
+      "如意", "开心", "平安", "暴富", "健康", "喜乐", 
+      "心想事成", "万事如意", "财源广进", "大吉大利", "好运连连", "岁岁平安"
+  ];
 
   // Handle Score Based Events
   useEffect(() => {
@@ -68,14 +73,61 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
         spawnSkyStars(newSkyStars);
     }
 
-    // 3. Fireworks (Every 66 points)
+    // 3. Fireworks (Every 66 points - Small batch)
     const newFireworks = Math.floor(currentScore / 66) - Math.floor(prevScore / 66);
     if (newFireworks > 0 && canvasRef.current) {
         launchFirework(newFireworks);
     }
 
+    // 4. Massive Firework Show (Every 150 points) - 10 to 28 fireworks
+    const newBigFireworkBatch = Math.floor(currentScore / 150) - Math.floor(prevScore / 150);
+    if (newBigFireworkBatch > 0 && canvasRef.current) {
+        // Random count between 10 and 28
+        const count = Math.floor(Math.random() * 19) + 10; 
+        launchFirework(count);
+    }
+
+    // 5. Auto-Decorate Tree (Every 10 points)
+    const newOrnaments = Math.floor(currentScore / 10) - Math.floor(prevScore / 10);
+    if (newOrnaments > 0 && particles.current.length > 0) {
+        spawnAutoOrnaments(newOrnaments);
+    }
+
     prevScoreRef.current = currentScore;
   }, [currentScore]);
+
+  const spawnAutoOrnaments = (count: number) => {
+      // Find valid leaf positions to attach ornaments to
+      const leaves = particles.current.filter(p => p.type === 'leaf');
+      if (leaves.length === 0) return;
+
+      for (let i = 0; i < count; i++) {
+          const randomLeaf = leaves[Math.floor(Math.random() * leaves.length)];
+          const color = COLORS.ORNAMENTS[Math.floor(Math.random() * COLORS.ORNAMENTS.length)];
+          
+          // Create ornament at the leaf's origin position
+          const ornament = createParticle(
+              randomLeaf.originX, 
+              randomLeaf.originY, 
+              color, 
+              'ornament', 
+              Math.random() * 3 + 3, // Random size
+              false
+          );
+          
+          // Ensure it changes color and sways
+          ornament.canSway = true;
+          ornament.colorTimer = Math.floor(Math.random() * 150) + 50;
+
+          // Layering: Insert at a random index instead of just pushing to the end
+          // This allows ornaments to appear both "behind" and "in front" of some leaves
+          const insertIndex = Math.floor(Math.random() * particles.current.length);
+          particles.current.splice(insertIndex, 0, ornament);
+          
+          // Small spark effect at creation
+          createExplosion(randomLeaf.originX, randomLeaf.originY, color, false);
+      }
+  };
 
   const spawnGroundParticles = (count: number) => {
       const canvas = canvasRef.current;
@@ -157,17 +209,20 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
           const startX = Math.random() * canvas.width * 0.8 + canvas.width * 0.1;
           const color = COLORS.ORNAMENTS[Math.floor(Math.random() * COLORS.ORNAMENTS.length)];
           
+          // Target Height: Sky area (Top 10% to 40% of screen)
+          const targetY = canvas.height * 0.1 + Math.random() * (canvas.height * 0.3);
+
           fireworks.current.push({
               x: startX,
               y: canvas.height,
               originX: startX,
-              originY: canvas.height * 0.3 + Math.random() * canvas.height * 0.2, 
-              vx: (Math.random() - 0.5) * 2,
-              vy: -(Math.random() * 3 + 8), 
+              originY: targetY, 
+              vx: (Math.random() - 0.5) * 4, // Spread out a bit more
+              vy: -(Math.random() * 4 + 10), // High initial velocity to reach sky
               size: 3,
               color: color,
               density: 1,
-              friction: 0.98,
+              friction: 0.96, // Slightly more drag so they stop at apex
               ease: 0,
               type: 'firework_rocket',
               life: 1
@@ -204,6 +259,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
     }
 
     // 2. Generate Leaves (3 Triangles stacked)
+    // Modified: No initial ornaments, just leaves
     const layerHeight = leavesHeight / TREE_LAYERS;
     
     for (let i = 0; i < TREE_LAYERS; i++) {
@@ -231,18 +287,11 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
         const innerBound = halfWidthAtY * 0.85;
         const bounds = { minX: centerX - innerBound, maxX: centerX + innerBound };
 
-        const isOrnament = Math.random() > 0.96; 
-        if (isOrnament) {
-             const color = COLORS.ORNAMENTS[Math.floor(Math.random() * COLORS.ORNAMENTS.length)];
-             const particle = createParticle(p.x, p.y, color, 'ornament', Math.random() * 3 + 2, isEdge);
-             if (!isEdge) particle.bounds = bounds;
-             particles.current.push(particle);
-        } else {
-             const color = COLORS.LEAVES[Math.floor(Math.random() * COLORS.LEAVES.length)];
-             const particle = createParticle(p.x, p.y, color, 'leaf', undefined, isEdge);
-             if (!isEdge) particle.bounds = bounds;
-             particles.current.push(particle);
-        }
+        // Only create LEAVES initially. Ornaments are user-added later.
+        const color = COLORS.LEAVES[Math.floor(Math.random() * COLORS.LEAVES.length)];
+        const particle = createParticle(p.x, p.y, color, 'leaf', undefined, isEdge);
+        if (!isEdge) particle.bounds = bounds;
+        particles.current.push(particle);
       }
     }
 
@@ -305,7 +354,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
       type: type,
       isEdge: isEdge,
       canSway: canSway, // Assign sway capability
-      colorTimer: type === 'ornament' ? Math.floor(Math.random() * 200) + 50 : undefined
+      colorTimer: (type === 'ornament' || type === 'user_ornament') ? Math.floor(Math.random() * 200) + 50 : undefined
     };
   };
 
@@ -398,6 +447,21 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
       }
   };
 
+  const createShockwave = (x: number, y: number) => {
+      shockwaves.current.push({
+          x: x,
+          y: y,
+          originX: x, originY: y,
+          vx: 0, vy: 0,
+          size: 0, // Starts at 0 radius
+          color: 'rgba(255, 255, 255, 0.5)',
+          density: 0, friction: 0, ease: 0,
+          type: 'shockwave',
+          life: 1.0,
+          decay: 0.02
+      });
+  };
+
   const update = (width: number, height: number) => {
     // 1. Update Snow
     for (let i = 0; i < snowParticles.current.length; i++) {
@@ -426,40 +490,46 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
         if (g.y > height + 60) gifts.current.splice(i, 1);
     }
 
-    // 3. Update Mouse Trail - Only create trail when mouse is moving
-    if (mouse.current.x !== null && mouse.current.y !== null) {
-        // Check if mouse is moving by comparing current position with previous position
-        const isMoving = prevMouse.current.x !== null && prevMouse.current.y !== null &&
-                        (Math.abs(mouse.current.x - prevMouse.current.x) > 1 || 
-                         Math.abs(mouse.current.y - prevMouse.current.y) > 1);
-        
-        if (isMoving) {
-            for(let k = 0; k < 4; k++) { 
-                const angle = Math.random() * Math.PI * 2;
-                const speed = Math.random() * 2 + 0.5;
-                trailParticles.current.push({
-                    x: mouse.current.x,
-                    y: mouse.current.y,
-                    vx: Math.cos(angle) * speed,
-                    vy: Math.sin(angle) * speed,
-                    originX: 0,
-                    originY: 0,
-                    size: Math.random() * 4 + 2,
-                    color: TRAIL_COLORS[Math.floor(Math.random() * TRAIL_COLORS.length)],
-                    density: 1,
-                    friction: 0.95,
-                    ease: 0,
-                    type: 'trail',
-                    life: 1.0,
-                    decay: 0.02 + Math.random() * 0.03
-                });
-            }
+    // 3. Update Mouse Trail - Only when moving
+    const mx = mouse.current.x;
+    const my = mouse.current.y;
+    
+    // Calculate movement delta if mouse is active
+    let hasMoved = false;
+    if (mx !== null && my !== null && prevMouse.current.x !== null && prevMouse.current.y !== null) {
+        if (mx !== prevMouse.current.x || my !== prevMouse.current.y) {
+            hasMoved = true;
+        }
+    } else if (mx !== null && my !== null) {
+        // First entry
+        hasMoved = true;
+    }
+
+    if (mx !== null && my !== null && hasMoved) {
+        for(let k = 0; k < 4; k++) { 
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Math.random() * 2 + 0.5;
+            trailParticles.current.push({
+                x: mx,
+                y: my,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                originX: 0,
+                originY: 0,
+                size: Math.random() * 4 + 2,
+                color: TRAIL_COLORS[Math.floor(Math.random() * TRAIL_COLORS.length)],
+                density: 1,
+                friction: 0.95,
+                ease: 0,
+                type: 'trail',
+                life: 1.0,
+                decay: 0.02 + Math.random() * 0.03
+            });
         }
     }
     
-    // Update previous mouse position
-    prevMouse.current.x = mouse.current.x;
-    prevMouse.current.y = mouse.current.y;
+    // Update previous mouse position for next frame
+    prevMouse.current = { x: mx, y: my };
 
     // 4. Update Trail Particles
     for (let i = trailParticles.current.length - 1; i >= 0; i--) {
@@ -515,11 +585,22 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
             textParticles.current.splice(i, 1);
         }
     }
-    
-    const mx = mouse.current.x;
-    const my = mouse.current.y;
 
-    // 7. Update Ground Particles (Up/Down/Left/Right Sway)
+    // 7. Update Shockwaves
+    for (let i = shockwaves.current.length - 1; i >= 0; i--) {
+        const sw = shockwaves.current[i];
+        sw.size += 5; // Expand radius
+        if (sw.life !== undefined && sw.decay !== undefined) {
+            sw.life -= sw.decay;
+            if (sw.life <= 0) {
+                shockwaves.current.splice(i, 1);
+            }
+        }
+    }
+    
+    // mx, my already defined above
+
+    // 8. Update Ground Particles (Up/Down/Left/Right Sway)
     // Add sinusoidal movement + Mouse influence
     const time = Date.now() * 0.002;
     for (let i = 0; i < groundParticles.current.length; i++) {
@@ -550,7 +631,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
         p.y += p.vy;
     }
 
-    // 8. Update Tree & Explosion Particles
+    // 9. Update Tree & Explosion Particles
     if (!particles.current) return;
 
     // Pre-calculate global mouse sway for tree
@@ -579,7 +660,8 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
       }
 
       // Normal Tree Particles Logic
-      if (p.type === 'ornament' && p.colorTimer !== undefined) {
+      // Updated: Allow user_ornament to change colors too
+      if ((p.type === 'ornament' || p.type === 'user_ornament') && p.colorTimer !== undefined) {
           p.colorTimer--;
           if (p.colorTimer <= 0) {
               p.color = COLORS.ORNAMENTS[Math.floor(Math.random() * COLORS.ORNAMENTS.length)];
@@ -603,34 +685,51 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
           p.vy -= directionY;
       }
 
+      // Shockwave Interaction (Push all tree particles)
+      for(const sw of shockwaves.current) {
+          const distSw = Math.sqrt(Math.pow(p.x - sw.x, 2) + Math.pow(p.y - sw.y, 2));
+          // Shockwave pushes particles near its expanding ring
+          if (distSw < sw.size + 20 && distSw > sw.size - 20) {
+              const forceSw = 5; // Strong push
+              const angleSw = Math.atan2(p.y - sw.y, p.x - sw.x);
+              p.vx += Math.cos(angleSw) * forceSw;
+              p.vy += Math.sin(angleSw) * forceSw;
+          }
+      }
+
       // Return to origin with Sway (Clamped)
       let targetX = p.originX;
       let targetY = p.originY;
 
       // Apply sway ONLY if NOT edge AND particle has sway capability (20% chance)
-      if (!p.isEdge && p.canSway && mx !== null && my !== null) {
-          targetX += swayX;
-          targetY += swayY;
-
-          // Clamp X to bounds if they exist
-          if (p.bounds) {
-              if (targetX < p.bounds.minX) targetX = p.bounds.minX;
-              if (targetX > p.bounds.maxX) targetX = p.bounds.maxX;
+      // Note: User ornaments (User added) always sway lightly
+      if ((!p.isEdge && p.canSway) || p.type === 'user_ornament') {
+          if (mx !== null && my !== null) {
+            targetX += swayX;
+            targetY += swayY;
           }
       }
 
       // Physics integration
-      if (p.x !== targetX || p.y !== targetY) {
-          const dxHome = targetX - p.x;
-          const dyHome = targetY - p.y;
-          p.vx += dxHome * p.ease;
-          p.vy += dyHome * p.ease;
-      }
+      const dxHome = targetX - p.x;
+      const dyHome = targetY - p.y;
+      p.vx += dxHome * p.ease;
+      p.vy += dyHome * p.ease;
 
       p.vx *= p.friction;
       p.vy *= p.friction;
-      p.x += p.vx;
-      p.y += p.vy;
+      
+      let nextX = p.x + p.vx;
+      let nextY = p.y + p.vy;
+
+      // Clamp X to bounds if they exist (Prevent flying off tree too far)
+      if (p.bounds) {
+          if (nextX < p.bounds.minX) nextX = p.bounds.minX;
+          if (nextX > p.bounds.maxX) nextX = p.bounds.maxX;
+      }
+      
+      p.x = nextX;
+      p.y = nextY;
     }
   };
 
@@ -722,12 +821,20 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
       } else {
         ctx.globalAlpha = 1.0;
       }
+      
+      // Breathing color for leaves
+      if (p.type === 'leaf') {
+          const time = Date.now() * 0.002;
+          const breathe = Math.sin(time + p.originX * 0.01) * 0.2; // -0.2 to 0.2
+          // Very simple lighting: modify brightness by alpha or overlay
+          ctx.globalAlpha = 0.8 + breathe; 
+      }
 
       ctx.fillStyle = p.color;
       ctx.beginPath();
       
-      if (p.type === 'ornament' || p.type === 'star') {
-          ctx.shadowBlur = 8;
+      if (p.type === 'ornament' || p.type === 'star' || p.type === 'user_ornament') {
+          ctx.shadowBlur = p.type === 'user_ornament' ? 15 : 8; // Extra glow for user ornaments
           ctx.shadowColor = p.color;
       } else if (p.type === 'explosion' || p.type === 'firework_spark') {
           ctx.shadowBlur = 10;
@@ -741,6 +848,16 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
     }
     
     ctx.globalAlpha = 1.0;
+
+    // Draw Shockwaves
+    for (let i = 0; i < shockwaves.current.length; i++) {
+        const sw = shockwaves.current[i];
+        ctx.beginPath();
+        ctx.arc(sw.x, sw.y, sw.size, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(255, 255, 255, ${sw.life})`;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
 
     // 4. Draw Gifts
     for (let i = 0; i < gifts.current.length; i++) {
@@ -862,20 +979,27 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
      const clickX = e.clientX - rect.left;
      const clickY = e.clientY - rect.top;
      
-     // Check for gift clicks
+     // 1. Check for gift clicks
+     let hitGift = false;
      for (let i = gifts.current.length - 1; i >= 0; i--) {
          const g = gifts.current[i];
-         // Simple bounding box check (rotation ignored for hitbox simplicity)
          if (clickX >= g.x - g.width/2 - 10 && clickX <= g.x + g.width/2 + 10 &&
              clickY >= g.y - g.height/2 - 10 && clickY <= g.y + g.height/2 + 10) {
                  
-             // Hit!
              const score = g.baseScore * g.speedMultiplier;
              onScoreUpdate(score);
              createExplosion(g.x, g.y, g.color);
              gifts.current.splice(i, 1);
-             return; // Only click one at a time
+             hitGift = true;
+             return; 
          }
+     }
+
+     // 2. Shockwave logic
+     // Trigger if score > 0 AND (score is multiple of 9 OR score is multiple of 28)
+     if (!hitGift && currentScore > 0 && (currentScore % 9 === 0 || currentScore % 28 === 0)) {
+         createShockwave(clickX, clickY);
+         createExplosion(clickX, clickY, 'rgba(255,255,255,0.8)', false); 
      }
   };
 
@@ -891,7 +1015,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
       />
       {!isLoaded && (
         <div className="absolute inset-0 flex items-center justify-center text-white pointer-events-none">
-          <p className="text-xl animate-pulse">载入中</p>
+          <p className="text-xl animate-pulse">Planting tree...</p>
         </div>
       )}
     </div>
