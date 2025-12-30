@@ -13,6 +13,10 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
   const mouse = useRef<{ x: number | null; y: number | null }>({ x: null, y: null });
   const prevMouse = useRef<{ x: number | null; y: number | null }>({ x: null, y: null }); // Track previous mouse position
   
+  // Use a ref for the callback to ensure the animation loop always has the latest version
+  // without needing to restart the loop on prop change.
+  const onScoreUpdateRef = useRef(onScoreUpdate);
+  
   const particles = useRef<Particle[]>([]); // Tree particles
   const trailParticles = useRef<Particle[]>([]); // Mouse trail
   const snowParticles = useRef<SnowFlake[]>([]);
@@ -25,14 +29,17 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
   const textParticles = useRef<TextParticle[]>([]);
   const shockwaves = useRef<Particle[]>([]); 
   
+  // Refs for logic
   const animationFrameId = useRef<number>(0);
   const giftSpawnTimer = useRef<number>(0);
   const prevScoreRef = useRef<number>(0);
+  const scoreRef = useRef<number>(0); // Keep track of score inside animation loop
 
   // Configuration Constants
   const TREE_LAYERS = 3;
-  const PARTICLE_DENSITY_LEAVES = 1.2;
-  const PARTICLE_DENSITY_TRUNK = 2;
+  // Reduced density as requested
+  const PARTICLE_DENSITY_LEAVES = 0.8; 
+  const PARTICLE_DENSITY_TRUNK = 1.2;
   const MOUSE_RADIUS = 100;
   const RETURN_SPEED = 0.05;
   const SNOW_COUNT = 150;
@@ -49,9 +56,18 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
   const TRAIL_COLORS = ['#ef4444', '#22c55e', '#ffffff'];
   
   const FIREWORK_TEXTS = [
-      "如意", "开心", "平安", "暴富", "健康", "喜乐", 
+      "如意", "开开心心", "平安", "暴富", "健康", "真棒", "幸福", "快乐", "成功", "吉祥",
       "心想事成", "万事如意", "财源广进", "大吉大利", "好运连连", "岁岁平安"
   ];
+
+  useEffect(() => {
+      onScoreUpdateRef.current = onScoreUpdate;
+  }, [onScoreUpdate]);
+
+  // Sync scoreRef with prop
+  useEffect(() => {
+    scoreRef.current = currentScore;
+  }, [currentScore]);
 
   // Handle Score Based Events
   useEffect(() => {
@@ -61,10 +77,12 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
         return;
     }
     
-    // 1. Ground Particles (Every 16 points)
-    const newGroundParticles = Math.floor(currentScore / 16) - Math.floor(prevScore / 16);
-    if (newGroundParticles > 0 && canvasRef.current) {
-        spawnGroundParticles(newGroundParticles);
+    // 1. Ground Particles (Every 16 points) - CAP at 1600
+    if (currentScore < 1600) {
+        const newGroundParticles = Math.floor(currentScore / 16) - Math.floor(prevScore / 16);
+        if (newGroundParticles > 0 && canvasRef.current) {
+            spawnGroundParticles(newGroundParticles);
+        }
     }
 
     // 2. Sky Stars (Every 100 points)
@@ -79,18 +97,20 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
         launchFirework(newFireworks);
     }
 
-    // 4. Massive Firework Show (Every 150 points) - 10 to 28 fireworks
-    const newBigFireworkBatch = Math.floor(currentScore / 150) - Math.floor(prevScore / 150);
+    // 4. Massive Firework Show (Every 260 points) - 5 to 10 fireworks
+    const newBigFireworkBatch = Math.floor(currentScore / 260) - Math.floor(prevScore / 260);
     if (newBigFireworkBatch > 0 && canvasRef.current) {
-        // Random count between 10 and 28
-        const count = Math.floor(Math.random() * 19) + 10; 
+        // Random count between 5 and 10
+        const count = Math.floor(Math.random() * 6) + 5; 
         launchFirework(count);
     }
 
-    // 5. Auto-Decorate Tree (Every 10 points)
-    const newOrnaments = Math.floor(currentScore / 10) - Math.floor(prevScore / 10);
-    if (newOrnaments > 0 && particles.current.length > 0) {
-        spawnAutoOrnaments(newOrnaments);
+    // 5. Auto-Decorate Tree (Every 20 points) - CAP at 2000
+    if (currentScore < 2000) {
+        const newOrnaments = Math.floor(currentScore / 20) - Math.floor(prevScore / 20);
+        if (newOrnaments > 0 && particles.current.length > 0) {
+            spawnAutoOrnaments(newOrnaments);
+        }
     }
 
     prevScoreRef.current = currentScore;
@@ -244,7 +264,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
     const trunkHeight = treeHeight * 0.15;
     const trunkWidth = treeBaseWidth * 0.2;
     const leavesHeight = treeHeight * 0.85;
-    const bottomY = height - (height - treeHeight-50) / 2;
+    const bottomY = height - (height - treeHeight-70) / 2;
     const startY = bottomY - trunkHeight;
 
     // 1. Generate Trunk Particles
@@ -312,10 +332,11 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
     initSnow(width, height);
     
     // Restore score effects
-    if (prevScoreRef.current > 0) {
+    // Ground Particles Cap at 1600
+    if (prevScoreRef.current > 0 && prevScoreRef.current < 1600) {
         spawnGroundParticles(Math.floor(prevScoreRef.current / 16));
-        spawnSkyStars(Math.floor(prevScoreRef.current / 100));
     }
+    spawnSkyStars(Math.floor(prevScoreRef.current / 100));
 
     setIsLoaded(true);
   };
@@ -338,6 +359,8 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
     
     // Only 20% of non-edge particles should sway
     const canSway = !isEdge && Math.random() < 0.2;
+    // Only 50% of particles react to mouse
+    const reactive = Math.random() < 0.5;
 
     return {
       x: Math.random() * window.innerWidth,
@@ -354,48 +377,72 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
       type: type,
       isEdge: isEdge,
       canSway: canSway, // Assign sway capability
+      reactive: reactive, // 50% chance to react
       colorTimer: (type === 'ornament' || type === 'user_ornament') ? Math.floor(Math.random() * 200) + 50 : undefined
-    };
+    } as unknown as Particle;
   };
 
   const spawnGift = (width: number) => {
-      const rand = Math.random();
-      let type: Gift['type'] = 'small';
-      let widthPx = 30;
-      let heightPx = 30;
-      let color = '#22c55e'; // Green
-      let speedMult = 1;
-      let score = 2;
+      // Limit total gifts on screen to 10
+      if (gifts.current.length >= 10) return;
 
-      // Distribution: 50% Small, 30% Medium, 20% Large
-      if (rand > 0.8) {
-          type = 'large';
-          widthPx = 50;
-          heightPx = 50;
-          color = '#ef4444'; // Red
-          speedMult = 2;
-          score = 8;
-      } else if (rand > 0.5) {
-          type = 'medium';
-          widthPx = 40;
-          heightPx = 40;
-          color = '#ffffff'; // White
-          speedMult = 1.5;
-          score = 6;
+      const score = scoreRef.current;
+
+      // Configuration for all gift types
+      const GIFT_CONFIG: Record<string, { w: number; color: string; speed: number; score: number; ribbon: string }> = {
+          small:  { w: 30, color: '#22c55e', speed: 1,   score: 2,  ribbon: '#fbbf24' }, // Green / Gold
+          medium: { w: 40, color: '#ffffff', speed: 1.5, score: 6,  ribbon: '#ef4444' }, // White / Red
+          large:  { w: 50, color: '#ef4444', speed: 2,   score: 8,  ribbon: '#fbbf24' }, // Red / Gold
+          blue:   { w: 60, color: '#3b82f6', speed: 2.5, score: 10, ribbon: '#ffffff' }, // Blue / White
+          black:  { w: 70, color: '#334155', speed: 3.0, score: 12, ribbon: '#fbbf24' }, // Slate / Gold
+          yellow: { w: 80, color: '#facc15', speed: 3.5, score: 14, ribbon: '#ef4444' }, // Yellow / Red
+          pink:   { w: 90, color: '#f472b6', speed: 4.0, score: 16, ribbon: '#ffffff' }, // Pink / White
+          purple: { w: 100,color: '#a855f7', speed: 4.5, score: 18, ribbon: '#22c55e' }  // Purple / Green
+      };
+
+      // Determine available types based on current score
+      const availableTypes: Array<keyof typeof GIFT_CONFIG> = ['small', 'medium', 'large'];
+
+      if (score >= 100) availableTypes.push('blue');
+      if (score >= 200) availableTypes.push('black');
+      if (score >= 300) availableTypes.push('yellow');
+      if (score >= 400) availableTypes.push('pink');
+      if (score >= 500) availableTypes.push('purple');
+
+      // Randomly select one from the available pool
+      const selectedType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+      const config = GIFT_CONFIG[selectedType];
+      
+      let finalSpeed = config.speed;
+
+      // Difficulty Scaling
+      
+      // Phase 1: > 600 points. Small/Medium catch up to Large (min speed 2).
+      if (score > 600) {
+          finalSpeed = Math.max(finalSpeed, 2);
       }
+      
+      // Phase 2: > 2000 points. All speeds double.
+      if (score > 2000) {
+          finalSpeed *= 2;
+      }
+
+      const widthPx = config.w;
+      const heightPx = config.w; // Square boxes for now
 
       const x = Math.random() * (width - widthPx) + widthPx/2;
 
       gifts.current.push({
           id: Date.now() + Math.random(),
           x: x,
-          y: -60, // Start above screen
+          y: -120, // Start higher up for larger gifts
           width: widthPx,
           height: heightPx,
-          color: color,
-          type: type,
-          speedMultiplier: speedMult,
-          baseScore: score,
+          color: config.color,
+          ribbonColor: config.ribbon,
+          type: selectedType as Gift['type'],
+          speedMultiplier: finalSpeed,
+          baseScore: config.score,
           rotation: Math.random() * Math.PI,
           rotationSpeed: (Math.random() - 0.5) * 0.05
       });
@@ -462,6 +509,36 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
       });
   };
 
+  const collectGift = (g: Gift, width: number) => {
+      // 1. Calculate Score
+      const score = g.baseScore * g.speedMultiplier;
+      onScoreUpdateRef.current(score);
+      
+      // 2. Visual Effects
+      createExplosion(g.x, g.y, g.color);
+
+      // 3. Spawn Mechanics
+      let spawnCount = 0;
+      switch (g.type) {
+          case 'small': // Green
+              spawnCount = 1;
+              break;
+          case 'medium': // White
+              spawnCount = 2;
+              break;
+          case 'large': // Red
+              spawnCount = 3;
+              break;
+          default: // Blue, Black, Yellow, Pink, Purple
+              spawnCount = 2;
+              break;
+      }
+
+      for(let k=0; k < spawnCount; k++) {
+          spawnGift(width);
+      }
+  };
+
   const update = (width: number, height: number) => {
     // 1. Update Snow
     for (let i = 0; i < snowParticles.current.length; i++) {
@@ -487,7 +564,8 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
         const g = gifts.current[i];
         g.y += GIFT_BASE_SPEED * g.speedMultiplier;
         g.rotation += g.rotationSpeed;
-        if (g.y > height + 60) gifts.current.splice(i, 1);
+        // Increased clear limit for larger fast gifts
+        if (g.y > height + 150) gifts.current.splice(i, 1);
     }
 
     // 3. Update Mouse Trail - Only when moving
@@ -596,6 +674,18 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
                 shockwaves.current.splice(i, 1);
             }
         }
+        
+        // Shockwave collection logic: Check against all gifts
+        for (let j = gifts.current.length - 1; j >= 0; j--) {
+            const g = gifts.current[j];
+            const dist = Math.sqrt(Math.pow(g.x - sw.x, 2) + Math.pow(g.y - sw.y, 2));
+            // Collision detection with expanded shockwave (treat as ring or area)
+            // Simplifying to area check
+            if (dist < sw.size) {
+                 collectGift(g, width);
+                 gifts.current.splice(j, 1);
+            }
+        }
     }
     
     // mx, my already defined above
@@ -670,19 +760,22 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
       }
 
       // Physics interactions (Mouse Repulsion for all tree parts)
-      let dx = (mx !== null ? mx : -9999) - p.x;
-      let dy = (my !== null ? my : -9999) - p.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      
-      if (distance < MOUSE_RADIUS) {
-          const forceDirectionX = dx / distance;
-          const forceDirectionY = dy / distance;
-          const force = (MOUSE_RADIUS - distance) / MOUSE_RADIUS;
-          const directionX = forceDirectionX * force * p.density;
-          const directionY = forceDirectionY * force * p.density;
+      // Only 50% of particles are reactive to mouse hover (repulsion)
+      if (p.reactive) {
+          let dx = (mx !== null ? mx : -9999) - p.x;
+          let dy = (my !== null ? my : -9999) - p.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
           
-          p.vx -= directionX;
-          p.vy -= directionY;
+          if (distance < MOUSE_RADIUS) {
+              const forceDirectionX = dx / distance;
+              const forceDirectionY = dy / distance;
+              const force = (MOUSE_RADIUS - distance) / MOUSE_RADIUS;
+              const directionX = forceDirectionX * force * p.density;
+              const directionY = forceDirectionY * force * p.density;
+              
+              p.vx -= directionX;
+              p.vy -= directionY;
+          }
       }
 
       // Shockwave Interaction (Push all tree particles)
@@ -743,7 +836,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
       ctx.shadowColor = g.color;
       ctx.fillRect(-g.width/2, -g.height/2, g.width, g.height);
       
-      ctx.fillStyle = g.type === 'medium' ? '#ef4444' : '#fbbf24'; 
+      ctx.fillStyle = g.ribbonColor; 
       const ribbonWidth = g.width * 0.2;
       ctx.fillRect(-g.width/2, -ribbonWidth/2, g.width, ribbonWidth); 
       ctx.fillRect(-ribbonWidth/2, -g.height/2, ribbonWidth, g.height); 
@@ -936,12 +1029,13 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const handleResize = () => {
-      const w = window.innerWidth || document.documentElement.clientWidth || 800;
-      const h = window.innerHeight || document.documentElement.clientHeight || 600;
-      canvas.width = w;
-      canvas.height = h;
-      initTree(w, h);
+  const handleResize = () => {
+      // Use fixed container size instead of window size
+      const containerWidth = 482;
+      const containerHeight = 728;
+      canvas.width = containerWidth;
+      canvas.height = containerHeight;
+      initTree(containerWidth, containerHeight);
     };
 
     window.addEventListener('resize', handleResize);
@@ -956,10 +1050,19 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
   }, []);
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if(rect) {
-        mouse.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    }
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    // Calculate scale factors between CSS pixels and canvas pixels
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    // Get coordinates relative to canvas
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+    
+    mouse.current = { x, y };
   };
 
   const handleMouseLeave = () => {
@@ -967,36 +1070,50 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (rect) {
-        mouse.current = { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
-    }
+    const canvas = canvasRef.current;
+    if (!canvas || !e.touches.length) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    const touch = e.touches[0];
+    const x = (touch.clientX - rect.left) * scaleX;
+    const y = (touch.clientY - rect.top) * scaleY;
+    
+    mouse.current = { x, y };
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-     if (!canvasRef.current) return;
-     const rect = canvasRef.current.getBoundingClientRect();
-     const clickX = e.clientX - rect.left;
-     const clickY = e.clientY - rect.top;
+     const canvas = canvasRef.current;
+     if (!canvas) return;
      
-     // 1. Check for gift clicks
+     const rect = canvas.getBoundingClientRect();
+     // Precise coordinate mapping
+     const scaleX = canvas.width / rect.width;
+     const scaleY = canvas.height / rect.height;
+     const clickX = (e.clientX - rect.left) * scaleX;
+     const clickY = (e.clientY - rect.top) * scaleY;
+     
+     // 1. Check for gift clicks with precise collision detection
      let hitGift = false;
      for (let i = gifts.current.length - 1; i >= 0; i--) {
          const g = gifts.current[i];
-         if (clickX >= g.x - g.width/2 - 10 && clickX <= g.x + g.width/2 + 10 &&
-             clickY >= g.y - g.height/2 - 10 && clickY <= g.y + g.height/2 + 10) {
+         // Use exact gift boundaries with small tolerance
+         const tolerance = 8;
+         if (clickX >= g.x - g.width/2 - tolerance && 
+             clickX <= g.x + g.width/2 + tolerance &&
+             clickY >= g.y - g.height/2 - tolerance && 
+             clickY <= g.y + g.height/2 + tolerance) {
                  
-             const score = g.baseScore * g.speedMultiplier;
-             onScoreUpdate(score);
-             createExplosion(g.x, g.y, g.color);
+             collectGift(g, canvas.width);
              gifts.current.splice(i, 1);
              hitGift = true;
              return; 
          }
      }
 
-     // 2. Shockwave logic
-     // Trigger if score > 0 AND (score is multiple of 9 OR score is multiple of 28)
+     // 2. Shockwave logic - trigger on specific score multiples
      if (!hitGift && currentScore > 0 && (currentScore % 9 === 0 || currentScore % 28 === 0)) {
          createShockwave(clickX, clickY);
          createExplosion(clickX, clickY, 'rgba(255,255,255,0.8)', false); 
@@ -1004,18 +1121,18 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
   };
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 overflow-hidden">
+    <div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 overflow-hidden">
       <canvas
         ref={canvasRef}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         onTouchMove={handleTouchMove}
         onMouseDown={handleMouseDown}
-        className="block cursor-pointer touch-none"
+        className="block cursor-pointer touch-none w-full h-full"
       />
       {!isLoaded && (
         <div className="absolute inset-0 flex items-center justify-center text-white pointer-events-none">
-          <p className="text-xl animate-pulse">Planting tree...</p>
+          <p className="text-sm animate-pulse">加载中</p>
         </div>
       )}
     </div>
