@@ -379,7 +379,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
       canSway: canSway, // Assign sway capability
       reactive: reactive, // 50% chance to react
       colorTimer: (type === 'ornament' || type === 'user_ornament') ? Math.floor(Math.random() * 200) + 50 : undefined
-    };
+    } as unknown as Particle;
   };
 
   const spawnGift = (width: number) => {

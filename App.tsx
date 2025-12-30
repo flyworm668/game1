@@ -61,6 +61,7 @@ const App: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState(() => Math.floor(Math.random() * 4));
   const [looping, setLooping] = useState(false); // 默认不循环，自动跳转下一首
   const [showTrackList, setShowTrackList] = useState(false);
+  const [isCompact, setIsCompact] = useState(true); // 控制播放器展开/收起状态
   const [score, setScore] = useState(0);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -271,73 +272,101 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* Music Player - Top Left (带可选歌曲列表，左半边可点击选择歌曲) */}
+      {/* Music Player - Top Left (可展开/收起的播放器) */}
       <div className="absolute top-4 left-4 z-20">
-         <div className="bg-slate-900/60 backdrop-blur-md border border-white/10 p-2 pr-3 pl-1 rounded-2xl shadow-lg hover:bg-slate-900/80 transition-all group">
-            {/* Top row: controls and track info */}
-            <div className="flex items-center gap-3">
-               <div
-                 onClick={() => selectTrack((currentIndex + 1) % tracks.length)}
-                 className={`flex items-center gap-3 cursor-pointer p-2 rounded-full pl-3 pr-2 ${isPlaying ? 'animate-pulse' : ''}`}
-                 style={{ minWidth: 120 }}
-               >
-                   <div className="bg-indigo-500/20 p-2 rounded-full">
-                       <Music className={`w-5 h-5 text-indigo-300 ${isPlaying ? 'animate-spin-slow' : ''}`} />
-                   </div>
-
-                   <div className="flex-1 flex flex-col text-left">
-                       <span className="text-sm text-white font-medium truncate">{tracks[currentIndex].title}</span>
-                   </div>
+         {/* Compact Mode - 只有旋转的胶片 */}
+         {isCompact ? (
+           <div 
+             onClick={() => setIsCompact(false)}
+             className="bg-slate-900/60 backdrop-blur-md border border-white/10 p-3 rounded-2xl shadow-lg hover:bg-slate-900/80 transition-all cursor-pointer group"
+           >
+             <div className={`flex items-center justify-center ${isPlaying ? 'animate-spin-slow' : ''}`}>
+               <div className="bg-indigo-500/20 p-3 rounded-full group-hover:bg-indigo-500/30 transition-colors">
+                 <Music className={`w-6 h-6 text-indigo-300`} />
                </div>
+             </div>
+           </div>
+         ) : (
+           /* Expanded Mode - 完整播放器 */
+           <div className="bg-slate-900/60 backdrop-blur-md border border-white/10 p-2 pr-3 pl-1 rounded-2xl shadow-lg hover:bg-slate-900/80 transition-all group">
+             {/* Top row: controls and track info */}
+             <div className="flex items-center gap-3">
+                {/* 胶片区域 - 点击可收起 */}
+                <div
+                  onClick={() => setIsCompact(true)}
+                  className={`flex items-center gap-2 cursor-pointer p-2 rounded-full ${isPlaying ? 'animate-spin-slow' : ''}`}
+                >
+                    <div className="bg-indigo-500/20 p-2 rounded-full">
+                        <Music className={`w-5 h-5 text-indigo-300`} />
+                    </div>
+                </div>
 
-               <div className="h-6 w-px bg-white/10 mx-1 hidden sm:block"></div>
+                <div className="h-6 w-px bg-white/10 mx-1"></div>
 
-               <div className="flex items-center gap-1 ml-1">
-                 <button 
-                     onClick={togglePlay}
-                     className="p-2 hover:bg-white/10 rounded-full transition-colors text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                     aria-label={isPlaying ? "Pause music" : "Play music"}
-                 >
-                     {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current" />}
-                 </button>
+                {/* 歌曲名字 - 点击显示歌曲列表 */}
+                <div
+                  onClick={() => setShowTrackList(!showTrackList)}
+                  className="flex-1 flex flex-col text-left cursor-pointer hover:bg-white/5 rounded-lg p-2 transition-colors"
+                >
+                    <span className="text-sm text-white font-medium truncate">{tracks[currentIndex].title}</span>
+                    <span className="text-xs text-slate-400">点击选择歌曲</span>
+                </div>
 
-                 <button 
-                     onClick={toggleMute}
-                     className="p-2 hover:bg-white/10 rounded-full transition-colors text-slate-300 hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                     aria-label={isMuted ? "Unmute" : "Mute"}
-                 >
-                     {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-                 </button>
+                <div className="h-6 w-px bg-white/10 mx-1"></div>
+
+                <div className="flex items-center gap-1 ml-1">
+                  <button 
+                      onClick={togglePlay}
+                      className="p-2 hover:bg-white/10 rounded-full transition-colors text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                      aria-label={isPlaying ? "Pause music" : "Play music"}
+                  >
+                      {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current" />}
+                  </button>
+
+                  <button 
+                      onClick={toggleMute}
+                      className="p-2 hover:bg-white/10 rounded-full transition-colors text-slate-300 hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                      aria-label={isMuted ? "Unmute" : "Mute"}
+                  >
+                      {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                  </button>
+                </div>
+             </div>
+
+             {/* Progress bar */}
+             <div className="mt-2 mx-2">
+                <div 
+                  className="w-full h-1.5 bg-slate-700/50 rounded-full cursor-pointer overflow-hidden relative"
+                  onClick={handleProgressClick}
+                >
+                  <div 
+                    className="h-full bg-indigo-400 rounded-full transition-all duration-100"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-xs text-slate-300 mt-1">
+                  <span>{formatTime(audioRef.current?.currentTime || 0)}</span>
+                  <span>{formatTime(duration)}</span>
+                </div>
+             </div>
+
+             {/* 歌曲列表 - 点击歌曲名字显示 */}
+             {showTrackList && (
+               <div className="mt-2 bg-slate-900/70 backdrop-blur-md border border-white/10 rounded-xl py-2 shadow-xl w-56">
+                 {tracks.map((t, i) => (
+                   <button 
+                     key={t.title} 
+                     onClick={() => {
+                       selectTrack(i);
+                       setShowTrackList(false);
+                     }} 
+                     className={`w-full text-left px-4 py-2 hover:bg-white/5 transition-colors ${i === currentIndex ? 'bg-white/5' : ''}`}
+                   >
+                     <span className="text-sm text-white">{t.title}</span>
+                   </button>
+                 ))}
                </div>
-            </div>
-
-            {/* Progress bar - integrated in the same container */}
-            <div className="mt-2 mx-2">
-               <div 
-                 className="w-full h-1.5 bg-slate-700/50 rounded-full cursor-pointer overflow-hidden relative"
-                 onClick={handleProgressClick}
-               >
-                 <div 
-                   className="h-full bg-indigo-400 rounded-full transition-all duration-100"
-                   style={{ width: `${progress}%` }}
-                 />
-               </div>
-               <div className="flex justify-between text-xs text-slate-300 mt-1">
-                 <span>{formatTime(audioRef.current?.currentTime || 0)}</span>
-                 <span>{formatTime(duration)}</span>
-               </div>
-            </div>
-
-         </div>
-
-         {/* Track list dropdown */}
-         {showTrackList && (
-           <div className="mt-2 bg-slate-900/70 backdrop-blur-md border border-white/10 rounded-xl py-2 shadow-xl w-56">
-             {tracks.map((t, i) => (
-               <button key={t.title} onClick={() => selectTrack(i)} className={`w-full text-left px-4 py-2 hover:bg-white/5 transition-colors ${i === currentIndex ? 'bg-white/5' : ''}`}>
-                 <span className="text-sm text-white">{t.title}</span>
-               </button>
-             ))}
+             )}
            </div>
          )}
       </div>

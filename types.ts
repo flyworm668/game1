@@ -21,6 +21,7 @@ export interface Particle {
   // New properties
   isEdge?: boolean; // Only edge particles sway
   canSway?: boolean; // Only specific particles (e.g. 20% of inner) sway with mouse
+  reactive?: boolean; // 50% chance to react to mouse
   colorTimer?: number; // Timer for ornaments changing color
   text?: string; // For floating text particles
   bounds?: { minX: number; maxX: number }; // Constraint for swaying
