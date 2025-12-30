@@ -1031,7 +1031,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
 
   const handleResize = () => {
       // Use fixed container size instead of window size
-      const containerWidth = 482;
+      const containerWidth = 528;
       const containerHeight = 728;
       canvas.width = containerWidth;
       canvas.height = containerHeight;

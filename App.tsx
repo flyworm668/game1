@@ -212,8 +212,8 @@ const App: React.FC = () => {
   return (
     <div className="fixed inset-0 bg-slate-900 flex items-center justify-center overflow-hidden">
       {/* Mobile App Container - Fixed Size */}
-      <div className="relative bg-slate-900 rounded-[30px] shadow-2xl overflow-hidden border-4 border-slate-700"
-           style={{ width: '482px', height: '728px' }}>
+      <div className="relative bg-slate-900 overflow-hidden"
+           style={{ width: '528px', height: '728px' }}>
         
         {/* Hidden Audio Element */}
         <audio
