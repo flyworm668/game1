@@ -210,216 +210,221 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="relative w-full h-screen font-sans">
-      {/* Hidden Audio Element */}
-      <audio
-        ref={audioRef}
-        src={tracks[currentIndex].url}
-        loop={looping}
-        onEnded={() => {
-          if (!looping) {
-            setCurrentIndex(i => (i + 1) % tracks.length);
-          }
-        }}
-      />
+    <div className="fixed inset-0 bg-slate-900 flex items-center justify-center overflow-hidden">
+      {/* Mobile App Container - Fixed Size */}
+      <div className="relative bg-slate-900 rounded-[30px] shadow-2xl overflow-hidden border-4 border-slate-700"
+           style={{ width: '482px', height: '728px' }}>
+        
+        {/* Hidden Audio Element */}
+        <audio
+          ref={audioRef}
+          src={tracks[currentIndex].url}
+          loop={looping}
+          onEnded={() => {
+            if (!looping) {
+              setCurrentIndex(i => (i + 1) % tracks.length);
+            }
+          }}
+        />
 
-      {/* Background/Canvas Layer - Now receiving score */}
-      <TreeCanvas onScoreUpdate={handleScoreUpdate} currentScore={score} />
+        {/* Background/Canvas Layer - Now receiving score */}
+        <TreeCanvas onScoreUpdate={handleScoreUpdate} currentScore={score} />
 
-      {/* Start Overlay - 居中毛玻璃开始按钮 */}
-      {showStart && (
-        <div className={`fixed inset-0 flex items-center justify-center z-30 transition-opacity ${startFading ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-          <div className="glass-card p-8 rounded-3xl flex flex-col items-center gap-4">
-            <h2 className="text-3xl font-bold text-white">捕捉礼物盒子</h2>
-            <p className="text-sm text-slate-200/80">37928</p>
-            <button
-              onClick={handleStartClick}
-              className="start-btn mt-2 px-6 py-3 rounded-xl text-lg font-semibold"
-            >
-              开始
-            </button>
+        {/* Start Overlay - 居中毛玻璃开始按钮 */}
+        {showStart && (
+          <div className={`absolute inset-0 flex items-center justify-center z-30 transition-opacity ${startFading ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+            <div className="glass-card p-6 rounded-3xl flex flex-col items-center gap-3">
+              <h2 className="text-2xl font-bold text-white">捕捉礼物盒子</h2>
+              <p className="text-xs text-slate-200/80">37928</p>
+              <button
+                onClick={handleStartClick}
+                className="start-btn mt-2 px-5 py-2 rounded-xl text-lg font-semibold"
+              >
+                开始
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Score Board - Top Right */}
+        <div className="absolute top-3 right-3 z-20 animate-fade-in-down">
+            <div className="bg-slate-900/60 backdrop-blur-md border border-yellow-500/30 px-3 py-2 rounded-xl shadow-xl flex items-center gap-2">
+                <Gift className="w-5 h-5 text-yellow-400 animate-bounce" />
+                <div className="flex flex-col items-end">
+                    <span className="text-[10px] text-yellow-200/80 uppercase font-bold tracking-wider">得分</span>
+                    <span className="text-xl font-mono font-bold text-white leading-none">{score}</span>
+                </div>
+            </div>
+        </div>
+
+        {/* Foreground UI Layer - Header */}
+        <div className="absolute top-12 left-0 w-full p-4 pointer-events-none flex flex-col items-center z-10">
+          <div className="p-3 rounded-xl text-center pointer-events-auto animate-fade-in-down">
+            <h1 className="text-2xl font-bold text-white mb-1 font-serif flex items-center gap-2 justify-center drop-shadow-lg">
+               {/* Icons also fall */}
+               <div className={isPlaying ? "animate-pulse" : ""}>
+                   <FallingText text="★" delayStart={3000} />
+               </div>
+               <FallingText text="欢迎" delayStart={3500} />
+               <div className={isPlaying ? "animate-pulse" : ""}>
+                   <FallingText text="★" delayStart={3000} />
+               </div>
+            </h1>
+            <div className="text-slate-200 text-xs drop-shadow-md font-medium">
+               <FallingText text="收集礼物看祝福烟花" delayStart={4500} />
+            </div>
           </div>
         </div>
-      )}
 
-      {/* Score Board - Top Right */}
-      <div className="absolute top-4 right-4 z-20 animate-fade-in-down">
-          <div className="bg-slate-900/60 backdrop-blur-md border border-yellow-500/30 px-6 py-3 rounded-2xl shadow-xl flex items-center gap-3">
-              <Gift className="w-6 h-6 text-yellow-400 animate-bounce" />
-              <div className="flex flex-col items-end">
-                  <span className="text-xs text-yellow-200/80 uppercase font-bold tracking-wider">得分</span>
-                  <span className="text-2xl font-mono font-bold text-white leading-none">{score}</span>
-              </div>
-          </div>
-      </div>
-
-      {/* Foreground UI Layer - Header */}
-      <div className="absolute top-16 left-0 w-full p-6 pointer-events-none flex flex-col items-center z-10">
-        <div className="p-4 rounded-xl text-center pointer-events-auto animate-fade-in-down">
-          <h1 className="text-3xl md:text-5xl font-bold text-white mb-2 font-serif flex items-center gap-3 justify-center drop-shadow-lg">
-             {/* Icons also fall */}
-             <div className={isPlaying ? "animate-pulse" : ""}>
-                 <FallingText text="★" delayStart={3000} />
-             </div>
-             <FallingText text="欢迎" delayStart={3500} />
-             <div className={isPlaying ? "animate-pulse" : ""}>
-                 <FallingText text="★" delayStart={3000} />
-             </div>
-          </h1>
-          <div className="text-slate-200 text-sm md:text-base drop-shadow-md font-medium">
-             <FallingText text="收集礼物看祝福烟花" delayStart={4500} />
-          </div>
-        </div>
-      </div>
-
-      {/* Music Player - Top Left (可展开/收起的播放器) */}
-      <div className="absolute top-4 left-4 z-20">
-         {/* Compact Mode - 只有旋转的胶片 */}
-         {isCompact ? (
-           <div 
-             onClick={() => setIsCompact(false)}
-             className="bg-slate-900/60 backdrop-blur-md border border-white/10 p-3 rounded-2xl shadow-lg hover:bg-slate-900/80 transition-all cursor-pointer group"
-           >
-             <div className={`flex items-center justify-center ${isPlaying ? 'animate-spin-slow' : ''}`}>
-               <div className="bg-indigo-500/20 p-3 rounded-full group-hover:bg-indigo-500/30 transition-colors">
-                 <Music className={`w-6 h-6 text-indigo-300`} />
+        {/* Music Player - Top Left (可展开/收起的播放器) */}
+        <div className="absolute top-3 left-3 z-20">
+           {/* Compact Mode - 只有旋转的胶片 */}
+           {isCompact ? (
+             <div 
+               onClick={() => setIsCompact(false)}
+               className="bg-slate-900/60 backdrop-blur-md border border-white/10 p-2 rounded-xl shadow-lg hover:bg-slate-900/80 transition-all cursor-pointer group"
+             >
+               <div className={`flex items-center justify-center ${isPlaying ? 'animate-spin-slow' : ''}`}>
+                 <div className="bg-indigo-500/20 p-2 rounded-full group-hover:bg-indigo-500/30 transition-colors">
+                   <Music className={`w-4 h-4 text-indigo-300`} />
+                 </div>
                </div>
              </div>
-           </div>
-         ) : (
-           /* Expanded Mode - 完整播放器 */
-           <div className="bg-slate-900/60 backdrop-blur-md border border-white/10 p-2 pr-3 pl-1 rounded-2xl shadow-lg hover:bg-slate-900/80 transition-all group">
-             {/* Top row: controls and track info */}
-             <div className="flex items-center gap-3">
-                {/* 胶片区域 - 点击可收起 */}
-                <div
-                  onClick={() => setIsCompact(true)}
-                  className={`flex items-center gap-2 cursor-pointer p-2 rounded-full ${isPlaying ? 'animate-spin-slow' : ''}`}
-                >
-                    <div className="bg-indigo-500/20 p-2 rounded-full">
-                        <Music className={`w-5 h-5 text-indigo-300`} />
-                    </div>
-                </div>
-
-                <div className="h-6 w-px bg-white/10 mx-1"></div>
-
-                {/* 歌曲名字 - 点击显示歌曲列表 */}
-                <div
-                  onClick={() => setShowTrackList(!showTrackList)}
-                  className="flex-1 flex flex-col text-left cursor-pointer hover:bg-white/5 rounded-lg p-2 transition-colors"
-                >
-                    <span className="text-sm text-white font-medium truncate">{tracks[currentIndex].title}</span>
-                    <span className="text-xs text-slate-400">点击选择歌曲</span>
-                </div>
-
-                <div className="h-6 w-px bg-white/10 mx-1"></div>
-
-                <div className="flex items-center gap-1 ml-1">
-                  <button 
-                      onClick={togglePlay}
-                      className="p-2 hover:bg-white/10 rounded-full transition-colors text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                      aria-label={isPlaying ? "Pause music" : "Play music"}
+           ) : (
+             /* Expanded Mode - 完整播放器 */
+             <div className="bg-slate-900/60 backdrop-blur-md border border-white/10 p-1.5 pr-2 pl-1 rounded-xl shadow-lg hover:bg-slate-900/80 transition-all group w-48">
+               {/* Top row: controls and track info */}
+               <div className="flex items-center gap-2">
+                  {/* 胶片区域 - 点击可收起 */}
+                  <div
+                    onClick={() => setIsCompact(true)}
+                    className={`flex items-center gap-1 cursor-pointer p-1 rounded-full ${isPlaying ? 'animate-spin-slow' : ''}`}
                   >
-                      {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current" />}
-                  </button>
+                      <div className="bg-indigo-500/20 p-1.5 rounded-full">
+                          <Music className={`w-3 h-3 text-indigo-300`} />
+                      </div>
+                  </div>
 
-                  <button 
-                      onClick={toggleMute}
-                      className="p-2 hover:bg-white/10 rounded-full transition-colors text-slate-300 hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                      aria-label={isMuted ? "Unmute" : "Mute"}
+                  <div className="h-4 w-px bg-white/10 mx-1"></div>
+
+                  {/* 歌曲名字 - 点击显示歌曲列表 */}
+                  <div
+                    onClick={() => setShowTrackList(!showTrackList)}
+                    className="flex-1 flex flex-col text-left cursor-pointer hover:bg-white/5 rounded-lg p-1 transition-colors"
                   >
-                      {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-                  </button>
-                </div>
-             </div>
+                      <span className="text-[11px] text-white font-medium truncate">{tracks[currentIndex].title}</span>
+                      <span className="text-[9px] text-slate-400">点击选择歌曲</span>
+                  </div>
 
-             {/* Progress bar */}
-             <div className="mt-2 mx-2">
-                <div 
-                  className="w-full h-1.5 bg-slate-700/50 rounded-full cursor-pointer overflow-hidden relative"
-                  onClick={handleProgressClick}
-                >
+                  <div className="h-4 w-px bg-white/10 mx-1"></div>
+
+                  <div className="flex items-center gap-0.5 ml-1">
+                    <button 
+                        onClick={togglePlay}
+                        className="p-1 hover:bg-white/10 rounded-full transition-colors text-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                        aria-label={isPlaying ? "Pause music" : "Play music"}
+                    >
+                        {isPlaying ? <Pause className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current" />}
+                    </button>
+
+                    <button 
+                        onClick={toggleMute}
+                        className="p-1 hover:bg-white/10 rounded-full transition-colors text-slate-300 hover:text-white focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                        aria-label={isMuted ? "Unmute" : "Mute"}
+                    >
+                        {isMuted ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
+                    </button>
+                  </div>
+               </div>
+
+               {/* Progress bar */}
+               <div className="mt-1.5 mx-1.5">
                   <div 
-                    className="h-full bg-indigo-400 rounded-full transition-all duration-100"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-                <div className="flex justify-between text-xs text-slate-300 mt-1">
-                  <span>{formatTime(audioRef.current?.currentTime || 0)}</span>
-                  <span>{formatTime(duration)}</span>
-                </div>
-             </div>
-
-             {/* 歌曲列表 - 点击歌曲名字显示 */}
-             {showTrackList && (
-               <div className="mt-2 bg-slate-900/70 backdrop-blur-md border border-white/10 rounded-xl py-2 shadow-xl w-56">
-                 {tracks.map((t, i) => (
-                   <button 
-                     key={t.title} 
-                     onClick={() => {
-                       selectTrack(i);
-                       setShowTrackList(false);
-                     }} 
-                     className={`w-full text-left px-4 py-2 hover:bg-white/5 transition-colors ${i === currentIndex ? 'bg-white/5' : ''}`}
-                   >
-                     <span className="text-sm text-white">{t.title}</span>
-                   </button>
-                 ))}
+                    className="w-full h-1 bg-slate-700/50 rounded-full cursor-pointer overflow-hidden relative"
+                    onClick={handleProgressClick}
+                  >
+                    <div 
+                      className="h-full bg-indigo-400 rounded-full transition-all duration-100"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[9px] text-slate-300 mt-0.5">
+                    <span>{formatTime(audioRef.current?.currentTime || 0)}</span>
+                    <span>{formatTime(duration)}</span>
+                  </div>
                </div>
-             )}
-           </div>
-         )}
-      </div>
 
-      {/* Footer Credits */}
-      <div className="absolute bottom-4 right-4 pointer-events-none opacity-50 z-10 hidden md:block">
-        <p className="text-xs text-black">667.flyworm</p>
-      </div>
+               {/* 歌曲列表 - 点击歌曲名字显示 */}
+               {showTrackList && (
+                 <div className="mt-1 bg-slate-900/70 backdrop-blur-md border border-white/10 rounded-xl py-1 shadow-xl w-44">
+                   {tracks.map((t, i) => (
+                     <button 
+                       key={t.title} 
+                       onClick={() => {
+                         selectTrack(i);
+                         setShowTrackList(false);
+                       }} 
+                       className={`w-full text-left px-3 py-1.5 hover:bg-white/5 transition-colors ${i === currentIndex ? 'bg-white/5' : ''}`}
+                     >
+                       <span className="text-[11px] text-white">{t.title}</span>
+                     </button>
+                   ))}
+                 </div>
+               )}
+             </div>
+           )}
+        </div>
 
-      {/* Global Style Helper */}
-      <style>{`
-        @keyframes fade-in-down {
-          0% {
-            opacity: 0;
-            transform: translateY(-20px);
+        {/* Footer Credits */}
+        <div className="absolute bottom-3 right-3 pointer-events-none opacity-50 z-10 hidden md:block">
+          <p className="text-[9px] text-black">667.flyworm</p>
+        </div>
+
+        {/* Global Style Helper */}
+        <style>{`
+          @keyframes fade-in-down {
+            0% {
+              opacity: 0;
+              transform: translateY(-20px);
+            }
+            100% {
+              opacity: 1;
+              transform: translateY(0);
+            }
           }
-          100% {
-            opacity: 1;
-            transform: translateY(0);
+          .animate-fade-in-down {
+            animation: fade-in-down 1s ease-out forwards;
           }
-        }
-        .animate-fade-in-down {
-          animation: fade-in-down 1s ease-out forwards;
-        }
-        @keyframes spin-slow {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        .animate-spin-slow {
-            animation: spin-slow 8s linear infinite;
-        }
-        /* Start overlay glass styles */
-        .glass-card {
-          background: rgba(255,255,255,0.06);
-          border: 1px solid rgba(255,255,255,0.08);
-          backdrop-filter: blur(10px) saturate(120%);
-          -webkit-backdrop-filter: blur(10px) saturate(120%);
-          box-shadow: 0 8px 30px rgba(2,6,23,0.6);
-          pointer-events: auto;
-          text-align: center;
-        }
-        .start-btn {
-          background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
-          color: #fff;
-          border: 1px solid rgba(255,255,255,0.12);
-          backdrop-filter: blur(6px);
-          transition: transform 0.18s ease, box-shadow 0.18s ease;
-        }
-        .start-btn:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,0.45); }
-        /* Fade-out helper for overlay */
-        .opacity-0 { opacity: 0; transition: opacity 0.5s ease; }
-        .opacity-100 { opacity: 1; transition: opacity 0.2s ease; }
-      `}</style>
+          @keyframes spin-slow {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+          }
+          .animate-spin-slow {
+              animation: spin-slow 8s linear infinite;
+          }
+          /* Start overlay glass styles */
+          .glass-card {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.08);
+            backdrop-filter: blur(10px) saturate(120%);
+            -webkit-backdrop-filter: blur(10px) saturate(120%);
+            box-shadow: 0 8px 30px rgba(2,6,23,0.6);
+            pointer-events: auto;
+            text-align: center;
+          }
+          .start-btn {
+            background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.12);
+            backdrop-filter: blur(6px);
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+          }
+          .start-btn:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,0.45); }
+          /* Fade-out helper for overlay */
+          .opacity-0 { opacity: 0; transition: opacity 0.5s ease; }
+          .opacity-100 { opacity: 1; transition: opacity 0.2s ease; }
+        `}</style>
+      </div>
     </div>
   );
 };

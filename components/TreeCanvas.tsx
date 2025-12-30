@@ -1029,12 +1029,13 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const handleResize = () => {
-      const w = window.innerWidth || document.documentElement.clientWidth || 800;
-      const h = window.innerHeight || document.documentElement.clientHeight || 600;
-      canvas.width = w;
-      canvas.height = h;
-      initTree(w, h);
+  const handleResize = () => {
+      // Use fixed container size instead of window size
+      const containerWidth = 482;
+      const containerHeight = 728;
+      canvas.width = containerWidth;
+      canvas.height = containerHeight;
+      initTree(containerWidth, containerHeight);
     };
 
     window.addEventListener('resize', handleResize);
@@ -1049,10 +1050,19 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
   }, []);
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if(rect) {
-        mouse.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    }
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    // Calculate scale factors between CSS pixels and canvas pixels
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    // Get coordinates relative to canvas
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+    
+    mouse.current = { x, y };
   };
 
   const handleMouseLeave = () => {
@@ -1060,35 +1070,50 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (rect) {
-        mouse.current = { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
-    }
+    const canvas = canvasRef.current;
+    if (!canvas || !e.touches.length) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    const touch = e.touches[0];
+    const x = (touch.clientX - rect.left) * scaleX;
+    const y = (touch.clientY - rect.top) * scaleY;
+    
+    mouse.current = { x, y };
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-     if (!canvasRef.current) return;
-     const rect = canvasRef.current.getBoundingClientRect();
-     const clickX = e.clientX - rect.left;
-     const clickY = e.clientY - rect.top;
+     const canvas = canvasRef.current;
+     if (!canvas) return;
      
-     // 1. Check for gift clicks
+     const rect = canvas.getBoundingClientRect();
+     // Precise coordinate mapping
+     const scaleX = canvas.width / rect.width;
+     const scaleY = canvas.height / rect.height;
+     const clickX = (e.clientX - rect.left) * scaleX;
+     const clickY = (e.clientY - rect.top) * scaleY;
+     
+     // 1. Check for gift clicks with precise collision detection
      let hitGift = false;
      for (let i = gifts.current.length - 1; i >= 0; i--) {
          const g = gifts.current[i];
-         if (clickX >= g.x - g.width/2 - 10 && clickX <= g.x + g.width/2 + 10 &&
-             clickY >= g.y - g.height/2 - 10 && clickY <= g.y + g.height/2 + 10) {
+         // Use exact gift boundaries with small tolerance
+         const tolerance = 8;
+         if (clickX >= g.x - g.width/2 - tolerance && 
+             clickX <= g.x + g.width/2 + tolerance &&
+             clickY >= g.y - g.height/2 - tolerance && 
+             clickY <= g.y + g.height/2 + tolerance) {
                  
-             collectGift(g, canvasRef.current.width);
-
+             collectGift(g, canvas.width);
              gifts.current.splice(i, 1);
              hitGift = true;
              return; 
          }
      }
 
-     // 2. Shockwave logic
-     // Trigger if score > 0 AND (score is multiple of 9 OR score is multiple of 28)
+     // 2. Shockwave logic - trigger on specific score multiples
      if (!hitGift && currentScore > 0 && (currentScore % 9 === 0 || currentScore % 28 === 0)) {
          createShockwave(clickX, clickY);
          createExplosion(clickX, clickY, 'rgba(255,255,255,0.8)', false); 
@@ -1096,18 +1121,18 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
   };
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 overflow-hidden">
+    <div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 overflow-hidden">
       <canvas
         ref={canvasRef}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         onTouchMove={handleTouchMove}
         onMouseDown={handleMouseDown}
-        className="block cursor-pointer touch-none"
+        className="block cursor-pointer touch-none w-full h-full"
       />
       {!isLoaded && (
         <div className="absolute inset-0 flex items-center justify-center text-white pointer-events-none">
-          <p className="text-xl animate-pulse">加载中</p>
+          <p className="text-sm animate-pulse">加载中</p>
         </div>
       )}
     </div>
