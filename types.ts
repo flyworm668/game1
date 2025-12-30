@@ -44,7 +44,8 @@ export interface Gift {
   width: number;
   height: number;
   color: string;
-  type: 'small' | 'medium' | 'large';
+  ribbonColor: string;
+  type: 'small' | 'medium' | 'large' | 'blue' | 'black' | 'yellow' | 'pink' | 'purple';
   speedMultiplier: number;
   baseScore: number;
   rotation: number;
