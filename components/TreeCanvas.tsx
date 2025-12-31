@@ -258,13 +258,13 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
     skyStars.current = []; 
     
     const centerX = width / 2;
-    // Tree dimensions
-    const treeHeight = Math.min(height * 0.7, 600);
-    const treeBaseWidth = Math.min(width * 0.8, 500);
-    const trunkHeight = treeHeight * 0.15;
-    const trunkWidth = treeBaseWidth * 0.2;
-    const leavesHeight = treeHeight * 0.85;
-    const bottomY = height - (height - treeHeight-70) / 2;
+    // Tree dimensions - Compressed for smaller container
+    const treeHeight = Math.min(height * 0.55, 480); // Reduced from 0.7 to 0.55
+    const treeBaseWidth = Math.min(width * 0.7, 280); // Reduced from 0.8 to 0.7 and 500 to 280
+    const trunkHeight = treeHeight * 0.12; // Reduced from 0.15
+    const trunkWidth = treeBaseWidth * 0.18; // Slightly reduced from 0.2
+    const leavesHeight = treeHeight * 0.88; // Increased slightly to compensate
+    const bottomY = height - (height - treeHeight - 160) / 2; // Adjusted spacing
     const startY = bottomY - trunkHeight;
 
     // 1. Generate Trunk Particles
@@ -1031,8 +1031,8 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
 
   const handleResize = () => {
       // Use fixed container size instead of window size
-      const containerWidth = 528;
-      const containerHeight = 728;
+      const containerWidth = 425;
+      const containerHeight = 777;
       canvas.width = containerWidth;
       canvas.height = containerHeight;
       initTree(containerWidth, containerHeight);

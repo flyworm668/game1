@@ -7,6 +7,6 @@ export default defineConfig({
   base: '/game1/',
   server: {
     host: '0.0.0.0',
-    port: 4000,
+    port: 6007,
   },
 });

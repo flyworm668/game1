@@ -212,8 +212,8 @@ const App: React.FC = () => {
   return (
     <div className="fixed inset-0 bg-slate-900 flex items-center justify-center overflow-hidden">
       {/* Mobile App Container - Fixed Size */}
-      <div className="relative bg-slate-900 overflow-hidden"
-           style={{ width: '528px', height: '728px' }}>
+      <div className="relative bg-slate-900 rounded-[30px] shadow-2xl overflow-hidden border-4 border-slate-700"
+           style={{ width: '425px', height: '777px' }}>
         
         {/* Hidden Audio Element */}
         <audio
@@ -257,24 +257,7 @@ const App: React.FC = () => {
             </div>
         </div>
 
-        {/* Foreground UI Layer - Header */}
-        <div className="absolute top-12 left-0 w-full p-4 pointer-events-none flex flex-col items-center z-10">
-          <div className="p-3 rounded-xl text-center pointer-events-auto animate-fade-in-down">
-            <h1 className="text-2xl font-bold text-white mb-1 font-serif flex items-center gap-2 justify-center drop-shadow-lg">
-               {/* Icons also fall */}
-               <div className={isPlaying ? "animate-pulse" : ""}>
-                   <FallingText text="★" delayStart={3000} />
-               </div>
-               <FallingText text="欢迎" delayStart={3500} />
-               <div className={isPlaying ? "animate-pulse" : ""}>
-                   <FallingText text="★" delayStart={3000} />
-               </div>
-            </h1>
-            <div className="text-slate-200 text-xs drop-shadow-md font-medium">
-               <FallingText text="收集礼物看祝福烟花" delayStart={4500} />
-            </div>
-          </div>
-        </div>
+       
 
         {/* Music Player - Top Left (可展开/收起的播放器) */}
         <div className="absolute top-3 left-3 z-20">
