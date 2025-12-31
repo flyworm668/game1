@@ -42,7 +42,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
   const PARTICLE_DENSITY_TRUNK = 1.2;
   const MOUSE_RADIUS = 100;
   const RETURN_SPEED = 0.05;
-  const SNOW_COUNT = 150;
+  const SNOW_COUNT = 260;
   const GIFT_BASE_SPEED = 2;
 
   // Colors
@@ -56,8 +56,9 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
   const TRAIL_COLORS = ['#ef4444', '#22c55e', '#ffffff'];
   
   const FIREWORK_TEXTS = [
-      "如意", "开开心心", "平安", "暴富", "健康", "真棒", "幸福", "快乐", "成功", "吉祥",
-      "心想事成", "万事如意", "财源广进", "大吉大利", "好运连连", "岁岁平安"
+      "心想事成", "万事如意", "财源广进", "大吉大利", "好运连连", "岁岁平安", "福星高照", "步步高升", "龙马精神", "笑口常开"
+      , "恭喜发财", "福如东海", "寿比南山", "金玉满堂", "花开富贵", "招财进宝", "吉星高照", "事业有成", "前程似锦", "鹏程万里"
+      ,"飞天毛虫","新年再见"
   ];
 
   useEffect(() => {
@@ -86,17 +87,20 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
     }
 
     // 2. Sky Stars (Every 100 points)
-    const newSkyStars = Math.floor(currentScore / 100) - Math.floor(prevScore / 100);
+    if (currentScore < 2800) {
+        const newSkyStars = Math.floor(currentScore / 100) - Math.floor(prevScore / 100);
     if (newSkyStars > 0 && canvasRef.current) {
         spawnSkyStars(newSkyStars);
     }
+    }
 
     // 3. Fireworks (Every 66 points - Small batch)
+    if (currentScore < 2800) {
     const newFireworks = Math.floor(currentScore / 66) - Math.floor(prevScore / 66);
     if (newFireworks > 0 && canvasRef.current) {
         launchFirework(newFireworks);
     }
-
+    }
     // 4. Massive Firework Show (Every 260 points) - 5 to 10 fireworks
     const newBigFireworkBatch = Math.floor(currentScore / 260) - Math.floor(prevScore / 260);
     if (newBigFireworkBatch > 0 && canvasRef.current) {
@@ -383,8 +387,8 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
   };
 
   const spawnGift = (width: number) => {
-      // Limit total gifts on screen to 10
-      if (gifts.current.length >= 10) return;
+      // Limit total gifts on screen to 8
+      if (gifts.current.length >= 8) return;
 
       const score = scoreRef.current;
 
@@ -403,11 +407,11 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
       // Determine available types based on current score
       const availableTypes: Array<keyof typeof GIFT_CONFIG> = ['small', 'medium', 'large'];
 
-      if (score >= 100) availableTypes.push('blue');
-      if (score >= 200) availableTypes.push('black');
-      if (score >= 300) availableTypes.push('yellow');
-      if (score >= 400) availableTypes.push('pink');
-      if (score >= 500) availableTypes.push('purple');
+      if (score >= 500) availableTypes.push('blue');
+      if (score >= 1000) availableTypes.push('black');
+      if (score >= 2000) availableTypes.push('yellow');
+      if (score >= 4000) availableTypes.push('pink');
+      if (score >= 8000) availableTypes.push('purple');
 
       // Randomly select one from the available pool
       const selectedType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
@@ -424,6 +428,14 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
       
       // Phase 2: > 2000 points. All speeds double.
       if (score > 2000) {
+          finalSpeed *= 2;
+      }
+
+      if (score > 4000) {
+          finalSpeed *= 2;
+      }
+      
+      if (score > 10000) {
           finalSpeed *= 2;
       }
 
@@ -521,16 +533,16 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
       let spawnCount = 0;
       switch (g.type) {
           case 'small': // Green
-              spawnCount = 1;
+              spawnCount = 3;
               break;
           case 'medium': // White
               spawnCount = 2;
               break;
           case 'large': // Red
-              spawnCount = 3;
+              spawnCount = 1;
               break;
           default: // Blue, Black, Yellow, Pink, Purple
-              spawnCount = 2;
+              spawnCount = 1;
               break;
       }
 
@@ -554,7 +566,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
     // 2. Gift Spawning & Logic
     giftSpawnTimer.current++;
     if (giftSpawnTimer.current > 60) {
-        if (Math.random() < 0.4) {
+        if (Math.random() < 0.8) {
             spawnGift(width);
         }
         giftSpawnTimer.current = 0;
@@ -656,7 +668,7 @@ const TreeCanvas: React.FC<TreeCanvasProps> = ({ onScoreUpdate, currentScore }) 
         const t = textParticles.current[i];
         t.y += t.vy;
         t.vy *= 0.9; // Slow down upward movement
-        t.opacity -= 0.01;
+        t.opacity -= 0.03;
         t.scale = Math.min(t.scale + 0.05, 1.5);
         
         if (t.opacity <= 0) {
